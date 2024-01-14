@@ -108,5 +108,54 @@ qnotes <- quantize(snotes, brass_spec_obj@energy, parts = 8)
 quantplot(qnotes, expected = rep(c(0, -12), each = 4), bars = 2)
 
 # load GTZAN dataset -------------------------------------------------
-test_sound <- readWave("data/genres/blues/blues.00000.wav")
+test_sound <- readWave("data/genres/metal/wav/metal.00001.wav")
 summary(test_sound)
+plot(test_sound)
+
+test_sound_spec_obj <- periodogram(
+  test_sound,
+  normalize = TRUE,
+  width = 1024,
+  overlap = 512
+)
+
+plot(test_sound_spec_obj, xlim = c(0, 2000), which = 1)
+image(test_sound_spec_obj, ylim = c(0, 1000))
+
+m1 <- melfcc(test_sound)
+length(m1)
+print(m1)
+summary(m1)
+
+image(m1, xlab = "Time", ylab = "MFCC Coefficients", main = "MFCC Heatmap")
+
+zcr_value <- zcr(test_sound)
+spec_centroid <- meanspec(test_sound)
+
+features <- data.frame()
+
+genres_path <- "data/genres/"
+
+for (genre in list.dirs(genres_path, full.names = TRUE, recursive = FALSE)) {
+  genre_name <- basename(genre)
+  
+  for (wav_file in list.files(paste(genre, "wav", sep = "/"), full.names = TRUE)) {
+    wave_obj = readWave(wav_file)
+    mfcc <- melfcc(wave_obj)
+    mfcc_means <- colSums(mfcc)
+    file_features <- data.frame(t(mfcc_means))
+    file_features$genre <- genre_name
+    features <- rbind(features, file_features)
+  }
+}
+
+set.seed(123)
+number_of_clusters <- 10
+
+features <- features[complete.cases(features), ]
+features_scaled <- scale(features[,-ncol(features)])
+
+kmeans_result <- kmeans(features_scaled, centers = number_of_clusters)
+kmeans_result
+
+features$Cluster <- kmeans_result$cluster
