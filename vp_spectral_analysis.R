@@ -6,10 +6,6 @@ if (!requireNamespace("tuneR", quietly = TRUE)) {
   install.packages("tuneR")
 }
 library(tuneR)
-if (!requireNamespace("pastecs", quietly = TRUE)) {
-  install.packages("pastecs")
-}
-library(pastecs)
 if (!requireNamespace("seewave", quietly = TRUE)) {
   install.packages("seewave")
 }
@@ -19,100 +15,6 @@ library(ggplot2)
 library(e1071)
 library(patchwork)
 library(reshape2)
-
-tuneR::setWavPlayer("/usr/bin/afplay")
-
-# tuneR Basics ------------------------------------------------------
-w_obj <- bind(sine(440), sine(220))
-show(w_obj)
-plot(w_obj)
-plot(extractWave(w_obj, from = 1, to = 500))
-play(w_obj)
-
-tmpfile <- file.path(tempdir(), "testfile.wav")
-writeWave(w_obj, tmpfile)
-w_obj2 <- readWave(tmpfile)
-
-w_obj_m <- mono(w_obj, "left")
-w_obj_m11 <- downsample(w_obj_m, 11025)
-w_obj_m11s <- extractWave(w_obj_m11)
-
-w_obj_m11s <- extractWave(w_obj_m11)
-
-w_spec_obj <- periodogram(
-  w_obj_m11s,
-  normalize = TRUE,
-  width = 1024,
-  overlap = 512
-)
-plot(w_spec_obj, xlim = c(0, 2000), which = 1)
-image(w_spec_obj, ylim = c(0, 1000))
-
-ff <- FF(w_spec_obj)
-print(ff)
-
-notes <- noteFromFF(ff, 440)
-snotes <- smoother(notes)
-melodyplot(w_spec_obj, snotes)
-
-qnotes <- quantize(snotes, w_spec_obj@energy, parts = 8)
-quantplot(qnotes, expected = rep(c(0, -12), each = 4), bars = 2)
-
-qlily <- quantMerge(snotes, 4, 4, 2)
-
-# analyze a real audio file - drum break -----------------------------
-drum_audio <- readWave("data/Motoko Break.wav")
-str(drum_audio)
-summary(drum_audio)
-
-plot(drum_audio)
-
-drum_audio_mono <- mono(drum_audio, "left")
-plot(drum_audio_mono)
-
-drum_spec_obj <- periodogram(
-  drum_audio_mono,
-  normalize = TRUE,
-  width = 1024,
-  overlap = 512
-)
-
-plot(drum_spec_obj, xlim = c(0, 2000), which = 1)
-image(drum_spec_obj, ylim = c(0, 1000))
-
-image(m1, xlab = "Time", ylab = "MFCC Coefficients", main = "MFCC Heatmap", col = colors(100))
-
-# analyze a real audio file - brass ----------------------------------
-brass_audio <- readWave("data/Brass_Waltzez.wav")
-str(brass_audio)
-summary(brass_audio)
-
-plot(brass_audio)
-
-brass_audio_mono <- mono(brass_audio, "left")
-plot(brass_audio_mono)
-
-brass_spec_obj <- periodogram(
-  brass_audio_mono,
-  normalize = TRUE,
-  width = 1024,
-  overlap = 512
-)
-
-plot(brass_spec_obj, xlim = c(0, 2000), which = 1)
-image(brass_spec_obj, ylim = c(0, 1000))
-
-ff <- FF(brass_spec_obj)
-print(ff)
-length(ff)
-summary(ff)
-
-notes <- noteFromFF(ff, 440)
-snotes <- smoother(notes)
-melodyplot(brass_spec_obj, snotes)
-
-qnotes <- quantize(snotes, brass_spec_obj@energy, parts = 8)
-quantplot(qnotes, expected = rep(c(0, -12), each = 4), bars = 2)
 
 # load GTZAN dataset -------------------------------------------------
 test_sound <- readWave("data/genres/metal/wav/metal.00001.wav")
@@ -136,21 +38,28 @@ summary(m1)
 
 colors <- colorRampPalette(c("white", "black"))
 
-image(m1, xlab = "Time", ylab = "MFCC Coefficients", main = "MFCC Heatmap", col = colors(100))
+image(
+  m1,
+  xlab = "Time",
+  ylab = "MFCC Coefficients",
+  main = "MFCC Heatmap",
+  col = colors(100)
+)
 
 zcr_value <- zcr(test_sound)
 spec_centroid <- meanspec(test_sound)
 
 features <- data.frame()
-
 genres_path <- "data/genres"
-
 n_mfcc <- 30
 
 for (genre in list.dirs(genres_path, full.names = TRUE, recursive = FALSE)) {
   genre_name <- basename(genre)
 
-  for (wav_file in list.files(paste(genre, "wav", sep = "/"), full.names = TRUE)) {
+  for (wav_file in list.files(
+    paste(genre, "wav", sep = "/"),
+    full.names = TRUE
+  )) {
     wave_obj <- readWave(wav_file)
     mfcc <- melfcc(wave_obj, numcep = n_mfcc)
     mfcc_means <- colSums(mfcc)
@@ -233,12 +142,13 @@ accuracy <- sum(predictions == true_labels) / length(true_labels)
 print(accuracy)
 
 confusion_matrix <- table(Predicted = predictions, True = true_labels)
-
 print(confusion_matrix)
 
 long_confusion_matrix <- melt(confusion_matrix)
 
-p2 <- ggplot(long_confusion_matrix, aes(x = True, y = Predicted, fill = value)) +
+p2 <- ggplot(
+  long_confusion_matrix, aes(x = True, y = Predicted, fill = value)
+) +
   geom_tile() +
   scale_fill_gradient(low = "white", high = "#0b3954") +
   labs(x = "Predicted", y = "True", fill = "Count") +
@@ -249,6 +159,7 @@ p2 <- ggplot(long_confusion_matrix, aes(x = True, y = Predicted, fill = value)) 
     plot.title = element_text(hjust = 0.5)
   ) +
   ggtitle("Confusion Matrix")
+print(p2)
 
 combined_plot <- p1 + p2
 print(combined_plot)
