@@ -21,4 +21,6 @@ This project uses the GTZAN dataset for music genre classification.
 3. **Converting to WAV Format:**  
    To convert the dataset to WAV files, run the `convert_to_wav.sh` script located in the root directory:
    ```bash
+   chmod +x convert_to_wav.sh
    ./convert_to_wav.sh
+   ```
