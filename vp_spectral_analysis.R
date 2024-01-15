@@ -165,7 +165,7 @@ set.seed(123)
 number_of_clusters <- 2
 
 features <- features[complete.cases(features), ]
-selected_genres <- features[features$genre %in% c("pop", "metal"), ]
+selected_genres <- features[features$genre %in% c("jazz", "rock"), ]
 features_scaled <- scale(selected_genres[, -ncol(selected_genres)])
 
 kmeans_result <- kmeans(features_scaled, centers = number_of_clusters)
