@@ -17,6 +17,8 @@ library(seewave)
 library(cluster)
 library(ggplot2)
 library(e1071)
+library(patchwork)
+library(reshape2)
 
 tuneR::setWavPlayer("/usr/bin/afplay")
 
@@ -113,9 +115,9 @@ qnotes <- quantize(snotes, brass_spec_obj@energy, parts = 8)
 quantplot(qnotes, expected = rep(c(0, -12), each = 4), bars = 2)
 
 # load GTZAN dataset -------------------------------------------------
-test_sound <- readWave("data/genres/classical/wav/classical.00015.wav")
+test_sound <- readWave("data/genres/metal/wav/metal.00001.wav")
 summary(test_sound)
-plot(test_sound, col="#ff5a5f")
+plot(test_sound, col = "#ff5a5f")
 
 test_sound_spec_obj <- periodogram(
   test_sound,
@@ -143,7 +145,7 @@ features <- data.frame()
 
 genres_path <- "data/genres"
 
-n_mfcc <- 40
+n_mfcc <- 30
 
 for (genre in list.dirs(genres_path, full.names = TRUE, recursive = FALSE)) {
   genre_name <- basename(genre)
@@ -188,9 +190,9 @@ sil_df$cumsum <- ave(
   FUN = function(x) cumsum(x) - x / 2
 )
 
-colors <- c("#ef476f", "#118ab2")
+colors <- c("#ff5a5f", "#0b3954")
 
-ggplot(
+p1 <- ggplot(
   sil_df,
   aes(x = cluster, y = sil_width, fill = as.factor(cluster))
 ) +
@@ -205,6 +207,7 @@ ggplot(
     fill = "Cluster"
   ) +
   theme(legend.position = "bottom")
+print(p1)
 
 # classification with svm ---------------------------------------------
 set.seed(123)
@@ -233,20 +236,19 @@ confusion_matrix <- table(Predicted = predictions, True = true_labels)
 
 print(confusion_matrix)
 
-library(reshape2)
-
 long_confusion_matrix <- melt(confusion_matrix)
 
-# Plot using ggplot2
-ggplot(long_confusion_matrix, aes(x = True, y = Predicted, fill = value)) +
-  geom_tile(color = "black", linewidth = 0.5) +
-  geom_text(aes(label = value), vjust = 1) +
-  scale_fill_gradient(low = "white", high = "#0496ff") +
+p2 <- ggplot(long_confusion_matrix, aes(x = True, y = Predicted, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "#0b3954") +
+  labs(x = "Predicted", y = "True", fill = "Count") +
   theme_minimal() +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1),
     axis.title = element_text(size = 12),
     plot.title = element_text(hjust = 0.5)
   ) +
-  ggtitle("Confusion Matrix") +
-  labs(x = "Actual Class", y = "Predicted Class", fill = "Count")
+  ggtitle("Confusion Matrix")
+
+combined_plot <- p1 + p2
+print(combined_plot)
