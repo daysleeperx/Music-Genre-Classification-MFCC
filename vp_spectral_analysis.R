@@ -200,3 +200,30 @@ ggplot(
     fill = "Cluster"
   ) +
   theme(legend.position = "bottom")
+
+# classification with svm ---------------------------------------------
+set.seed(123)
+
+shuffled_indices <- sample(seq_len(nrow(features)))
+shuffled_data <- features[shuffled_indices, ]
+
+train_index <- 1:(0.8 * nrow(shuffled_data))
+test_index <- (0.8 * nrow(shuffled_data) + 1):nrow(shuffled_data)
+
+train_set <- shuffled_data[train_index, ]
+test_set <- shuffled_data[test_index, ]
+
+train_set$genre <- as.factor(train_set$genre)
+test_set$genre <- as.factor(test_set$genre)
+
+svm_model <- svm(genre ~ ., data = train_set, kernel = "radial")
+
+predictions <- predict(svm_model, test_set[, -ncol(test_set)])
+
+true_labels <- test_set$genre
+accuracy <- sum(predictions == true_labels) / length(true_labels)
+print(accuracy)
+
+confusion_matrix <- table(Predicted = predictions, True = true_labels)
+
+print(confusion_matrix)
