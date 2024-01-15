@@ -16,10 +16,11 @@ if (!requireNamespace("seewave", quietly = TRUE)) {
 library(seewave)
 library(cluster)
 library(ggplot2)
+library(e1071)
 
 tuneR::setWavPlayer("/usr/bin/afplay")
 
-# tuneR Basiscs ------------------------------------------------------
+# tuneR Basics ------------------------------------------------------
 w_obj <- bind(sine(440), sine(220))
 show(w_obj)
 plot(w_obj)
@@ -77,6 +78,8 @@ drum_spec_obj <- periodogram(
 plot(drum_spec_obj, xlim = c(0, 2000), which = 1)
 image(drum_spec_obj, ylim = c(0, 1000))
 
+image(m1, xlab = "Time", ylab = "MFCC Coefficients", main = "MFCC Heatmap", col = colors(100))
+
 # analyze a real audio file - brass ----------------------------------
 brass_audio <- readWave("data/Brass_Waltzez.wav")
 str(brass_audio)
@@ -110,9 +113,9 @@ qnotes <- quantize(snotes, brass_spec_obj@energy, parts = 8)
 quantplot(qnotes, expected = rep(c(0, -12), each = 4), bars = 2)
 
 # load GTZAN dataset -------------------------------------------------
-test_sound <- readWave("data/genres/metal/wav/metal.00001.wav")
+test_sound <- readWave("data/genres/classical/wav/classical.00015.wav")
 summary(test_sound)
-plot(test_sound)
+plot(test_sound, col="#ff5a5f")
 
 test_sound_spec_obj <- periodogram(
   test_sound,
@@ -124,12 +127,14 @@ test_sound_spec_obj <- periodogram(
 plot(test_sound_spec_obj, xlim = c(0, 2000), which = 1)
 image(test_sound_spec_obj, ylim = c(0, 1000))
 
-m1 <- melfcc(test_sound, numcep = 30)
+m1 <- melfcc(test_sound, numcep = 12)
 length(m1)
 print(m1)
 summary(m1)
 
-image(m1, xlab = "Time", ylab = "MFCC Coefficients", main = "MFCC Heatmap")
+colors <- colorRampPalette(c("white", "black"))
+
+image(m1, xlab = "Time", ylab = "MFCC Coefficients", main = "MFCC Heatmap", col = colors(100))
 
 zcr_value <- zcr(test_sound)
 spec_centroid <- meanspec(test_sound)
@@ -138,7 +143,7 @@ features <- data.frame()
 
 genres_path <- "data/genres"
 
-n_mfcc <- 30
+n_mfcc <- 40
 
 for (genre in list.dirs(genres_path, full.names = TRUE, recursive = FALSE)) {
   genre_name <- basename(genre)
@@ -227,3 +232,21 @@ print(accuracy)
 confusion_matrix <- table(Predicted = predictions, True = true_labels)
 
 print(confusion_matrix)
+
+library(reshape2)
+
+long_confusion_matrix <- melt(confusion_matrix)
+
+# Plot using ggplot2
+ggplot(long_confusion_matrix, aes(x = True, y = Predicted, fill = value)) +
+  geom_tile(color = "black", linewidth = 0.5) +
+  geom_text(aes(label = value), vjust = 1) +
+  scale_fill_gradient(low = "white", high = "#0496ff") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title = element_text(size = 12),
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  ggtitle("Confusion Matrix") +
+  labs(x = "Actual Class", y = "Predicted Class", fill = "Count")
