@@ -14,6 +14,8 @@ if (!requireNamespace("seewave", quietly = TRUE)) {
   install.packages("seewave")
 }
 library(seewave)
+library(cluster)
+library(ggplot2)
 
 tuneR::setWavPlayer("/usr/bin/afplay")
 
@@ -122,7 +124,7 @@ test_sound_spec_obj <- periodogram(
 plot(test_sound_spec_obj, xlim = c(0, 2000), which = 1)
 image(test_sound_spec_obj, ylim = c(0, 1000))
 
-m1 <- melfcc(test_sound)
+m1 <- melfcc(test_sound, numcep = 30)
 length(m1)
 print(m1)
 summary(m1)
@@ -134,14 +136,16 @@ spec_centroid <- meanspec(test_sound)
 
 features <- data.frame()
 
-genres_path <- "data/genres/"
+genres_path <- "data/genres"
+
+n_mfcc <- 30
 
 for (genre in list.dirs(genres_path, full.names = TRUE, recursive = FALSE)) {
   genre_name <- basename(genre)
-  
+
   for (wav_file in list.files(paste(genre, "wav", sep = "/"), full.names = TRUE)) {
-    wave_obj = readWave(wav_file)
-    mfcc <- melfcc(wave_obj)
+    wave_obj <- readWave(wav_file)
+    mfcc <- melfcc(wave_obj, numcep = n_mfcc)
     mfcc_means <- colSums(mfcc)
     file_features <- data.frame(t(mfcc_means))
     file_features$genre <- genre_name
@@ -149,13 +153,50 @@ for (genre in list.dirs(genres_path, full.names = TRUE, recursive = FALSE)) {
   }
 }
 
+# clustering with k-means --------------------------------------------
 set.seed(123)
-number_of_clusters <- 10
+number_of_clusters <- 2
 
 features <- features[complete.cases(features), ]
-features_scaled <- scale(features[,-ncol(features)])
+selected_genres <- features[features$genre %in% c("pop", "metal"), ]
+features_scaled <- scale(selected_genres[, -ncol(selected_genres)])
 
 kmeans_result <- kmeans(features_scaled, centers = number_of_clusters)
 kmeans_result
 
-features$Cluster <- kmeans_result$cluster
+selected_genres$cluster <- kmeans_result$cluster
+
+# compute and plot silhouette coefficient -----------------------------
+sil_width <- silhouette(kmeans_result$cluster, dist(features_scaled))
+
+sil_df <- data.frame(
+  cluster = factor(sil_width[, 1]),
+  neighbor = factor(sil_width[, 2]),
+  sil_width = sil_width[, 3]
+)
+
+sil_df <- sil_df[order(sil_df$cluster, sil_df$sil_width), ]
+
+sil_df$cumsum <- ave(
+  sil_df$sil_width,
+  sil_df$cluster,
+  FUN = function(x) cumsum(x) - x / 2
+)
+
+colors <- c("#ef476f", "#118ab2")
+
+ggplot(
+  sil_df,
+  aes(x = cluster, y = sil_width, fill = as.factor(cluster))
+) +
+  geom_col() +
+  coord_flip() +
+  scale_fill_manual(values = colors) +
+  theme_minimal() +
+  labs(
+    title = "Silhouette Coefficient",
+    x = "Cluster",
+    y = "Silhouette Width",
+    fill = "Cluster"
+  ) +
+  theme(legend.position = "bottom")
