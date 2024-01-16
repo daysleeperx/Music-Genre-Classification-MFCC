@@ -15,6 +15,7 @@ library(ggplot2)
 library(e1071)
 library(patchwork)
 library(reshape2)
+library(dplyr)
 
 # load GTZAN dataset -------------------------------------------------
 test_sound <- readWave("data/genres/metal/wav/metal.00001.wav")
@@ -74,7 +75,7 @@ set.seed(123)
 number_of_clusters <- 2
 
 features <- features[complete.cases(features), ]
-selected_genres <- features[features$genre %in% c("jazz", "rock"), ]
+selected_genres <- features[features$genre %in% c("pop", "metal"), ]
 features_scaled <- scale(selected_genres[, -ncol(selected_genres)])
 
 kmeans_result <- kmeans(features_scaled, centers = number_of_clusters)
@@ -123,6 +124,9 @@ set.seed(123)
 
 shuffled_indices <- sample(seq_len(nrow(features)))
 shuffled_data <- features[shuffled_indices, ]
+
+shuffled_data <- shuffled_data %>%
+  mutate_at(vars(-genre), scale)
 
 train_index <- 1:(0.8 * nrow(shuffled_data))
 test_index <- (0.8 * nrow(shuffled_data) + 1):nrow(shuffled_data)
